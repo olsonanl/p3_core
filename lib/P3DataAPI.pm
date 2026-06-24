@@ -149,20 +149,19 @@ sub new {
     }
 
     $url ||= $default_url;
+
+    # The data API sits behind Cloudflare, which bans the default libwww-perl
+    # user-agent (error 1010). Present a configurable, allowlisted UA instead.
+    my $ua = LWP::UserAgent->new();
+    $ua->agent($FIG_Config::p3_data_api_user_agent
+               || $ENV{P3_USER_AGENT}
+               || "BV-BRC P3 Client");
+
     my $self = {
         url        => $url,
         chunk_size => 25000,
         limit 	   => undef,
-        ua         => do {
-            my $u = LWP::UserAgent->new();
-            # The data API sits behind Cloudflare, which bans the default
-            # libwww-perl user-agent (error 1010). Present a configurable,
-            # allowlisted UA instead.
-            $u->agent($FIG_Config::p3_data_api_user_agent
-                      || $ENV{P3_USER_AGENT}
-                      || "BV-BRC P3 Client");
-            $u;
-        },
+        ua         => $ua,
         token      => $token,
         benchmark  => 0,
         raw        => 0,
