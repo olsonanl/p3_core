@@ -1173,6 +1173,11 @@ the calling code may emit detailed usage messages if needed.
 sub script_opts {
     # Get the parameters.
     my ($parmComment, @options) = @_;
+    # Check for an input spec hash as the first option.
+    my $banner = "";
+    if (ref($options[0]) eq 'HASH' && $options[0]->{_input_spec}) {
+        $banner = shift(@options)->{_input_spec};
+    }
     # Insure we can talk to PATRIC from inside Argonne.
     $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
     # Parse the command line.
@@ -1180,10 +1185,48 @@ sub script_opts {
            [ "help|h", "display usage information", { shortcircuit => 1}]);
     # The above method dies if the options are invalid. We check here for the HELP option.
     if ($retVal->help) {
+        print $banner if $banner;
         print $usage->text;
         exit;
     }
     return wantarray ? ($retVal, $usage) : $retVal;
+}
+
+=head3 input_spec
+
+    my $spec = P3Utils::input_spec(input => "...", output => "...", example => "...");
+
+Returns a formatted banner string describing a script's input/output model, for
+display in the C<--help> output. Pass the result as C<< { _input_spec => $spec } >>
+as the first element of the options list to L</script_opts>.
+
+=over 4
+
+=item input
+
+Description of what the script reads (e.g., "tab-delimited genome IDs on stdin").
+
+=item output
+
+Description of what the script produces.
+
+=item example
+
+A one-line usage example showing a typical invocation or pipeline.
+
+=back
+
+=cut
+
+sub input_spec {
+    my (%args) = @_;
+    my @lines;
+    push @lines, "" ;
+    push @lines, "  Input:   $args{input}" if $args{input};
+    push @lines, "  Output:  $args{output}" if $args{output};
+    push @lines, "  Example: $args{example}" if $args{example};
+    push @lines, "";
+    return join("\n", @lines) . "\n";
 }
 
 =head3 print_cols
