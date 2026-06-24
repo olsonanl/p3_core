@@ -153,7 +153,16 @@ sub new {
         url        => $url,
         chunk_size => 25000,
         limit 	   => undef,
-        ua         => LWP::UserAgent->new(),
+        ua         => do {
+            my $u = LWP::UserAgent->new();
+            # The data API sits behind Cloudflare, which bans the default
+            # libwww-perl user-agent (error 1010). Present a configurable,
+            # allowlisted UA instead.
+            $u->agent($FIG_Config::p3_data_api_user_agent
+                      || $ENV{P3_USER_AGENT}
+                      || "BV-BRC P3 Client");
+            $u;
+        },
         token      => $token,
         benchmark  => 0,
         raw        => 0,
@@ -627,6 +636,7 @@ sub query_cb {
     {
         my $lim = "limit($chunk,$start)";
         my $q   = "$qstr&$lim";
+	print STDERR "$self->{url} $core $q\n";
         my ($resp, $data) = $self->submit_query($core, $q);
 
         my $r = $resp->header('content-range');
