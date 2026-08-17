@@ -14,6 +14,7 @@ use Digest::MD5 'md5_hex';
 use Time::HiRes 'gettimeofday';
 use HTTP::Request::Common;
 use Data::Dumper;
+use P3ClientUA;
 
 our $have_p3auth;
 eval {
@@ -86,7 +87,7 @@ sub new {
     my $self = {
         url        => $url,
         chunk_size => 25000,
-        ua         => LWP::UserAgent->new(),
+        ua         => P3ClientUA::new_ua(),
         token      => $token,
         benchmark  => 0,
         raw        => 0,

@@ -23,6 +23,7 @@ eval {
 
 use HTTP::Request::Common;
 use Data::Dumper;
+use P3ClientUA;
 
 our $have_workspace;
 eval {
@@ -151,11 +152,9 @@ sub new {
     $url ||= $default_url;
 
     # The data API sits behind Cloudflare, which bans the default libwww-perl
-    # user-agent (error 1010). Present a configurable, allowlisted UA instead.
-    my $ua = LWP::UserAgent->new();
-    $ua->agent($FIG_Config::p3_data_api_user_agent
-               || $ENV{P3_USER_AGENT}
-               || "BV-BRC P3 Client");
+    # user-agent (error 1010). P3ClientUA presents an allowlisted one; it is
+    # the single definition of that string for every client in the tree.
+    my $ua = P3ClientUA::new_ua();
 
     my $self = {
         url        => $url,
@@ -500,7 +499,16 @@ sub submit_query {
             }
         } else {
             my $content = $response->content || "";
-            $error = "Failed: " . $response->code . " $content\nquery = $url?$q";
+            #
+            # A Cloudflare rejection is not our service answering; say so, and
+            # dump the exchange when P3_DEBUG_HTTP is set.
+            #
+            P3ClientUA::dump_http_failure($response, \*STDERR) if P3ClientUA::debug_enabled();
+            if (P3ClientUA::is_cloudflare_block($response)) {
+                $error = P3ClientUA::http_failure_message($response, "Query") . "\nquery = $url?$q";
+            } else {
+                $error = "Failed: " . $response->code . " $content\nquery = $url?$q";
+            }
         }
         if ($error) {
             if ($tries >= 15) {
@@ -717,6 +725,8 @@ sub solr_query_raw
     }
     else
     {
+        P3ClientUA::dump_http_failure($res, \*STDERR) if P3ClientUA::debug_enabled();
+        die P3ClientUA::http_failure_message($res, "Query") if P3ClientUA::is_cloudflare_block($res);
         die "Query failed: " . $res->code . " " . $res->content;
     }
 }
@@ -755,6 +765,8 @@ sub solr_query_raw_list
     }
     else
     {
+        P3ClientUA::dump_http_failure($res, \*STDERR) if P3ClientUA::debug_enabled();
+        die P3ClientUA::http_failure_message($res, "Query") if P3ClientUA::is_cloudflare_block($res);
         die "Query failed: " . $res->code . " " . $res->content;
     }
 }

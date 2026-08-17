@@ -29,6 +29,7 @@ package P3Utils;
     use Digest::MD5;
     use RoleParse;
     use P3View;
+    use P3ClientUA;
 
 =head1 PATRIC Script Utilities
 
@@ -1695,7 +1696,7 @@ sub list_object_fields {
     # Get the real name of the object.
     my $realName = OBJECTS->{$object};
     # Ask for the JSON schema string.
-    my $ua = LWP::UserAgent->new();
+    my $ua = P3ClientUA::new_ua();
     my $url = $p3->{url} . "/$realName/schema?http_content-type=application/solrquery+x-www-form-urlencoded&http_accept=application/solr+json";
     my $request = HTTP::Request->new(GET => $url);
     my $response = $ua->request($request);
